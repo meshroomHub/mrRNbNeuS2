@@ -79,6 +79,10 @@ before launching Meshroom; it overrides the plugin default:
 export RNB_NEUS2_TESTBED_PATH=/path/to/RNb-NeuS2/build/testbed
 ```
 
+Updating or reinstalling the plugin from the plugin manager replaces its folder,
+`RNb-NeuS2/` included: extract the release archive again afterwards, or keep it
+outside the plugin folder with `RNB_NEUS2_TESTBED_PATH`.
+
 ### Manual install (without the plugin manager)
 
 ```bash
