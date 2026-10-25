@@ -60,14 +60,23 @@ archive matching your OS from the
 check its SHA-256 against the one shown on the release page, and extract it into the
 plugin folder:
 
+Linux:
+
 ```bash
 cd /path/to/plugins/mrRNbNeuS2
-sha256sum RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz
-tar xzf RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz   # creates RNb-NeuS2/
+sha256sum /path/to/RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz
+tar xzf /path/to/RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz   # gives mrRNbNeuS2/RNb-NeuS2/build/testbed
 ```
 
-On Windows, extract `RNb-NeuS2-2.0.1-windows-x86_64-cu124-py311.zip` the same way.
-The node then finds `RNb-NeuS2/build/testbed` (default of `RNB_NEUS2_TESTBED_PATH`
+Windows (PowerShell):
+
+```powershell
+cd C:\path\to\plugins\mrRNbNeuS2
+Get-FileHash C:\path\to\RNb-NeuS2-2.0.1-windows-x86_64-cu124-py311.zip   # SHA256
+Expand-Archive C:\path\to\RNb-NeuS2-2.0.1-windows-x86_64-cu124-py311.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
+```
+
+The node then finds `RNb-NeuS2/build/testbed` (`testbed.exe` on Windows; default of `RNB_NEUS2_TESTBED_PATH`
 in `pyproject.toml`, relative to the plugin root). Only `build/`, `configs/` and
 `utils/` of the archive are used: the testbed reads its MLP weights from
 `../utils/` next to `build/`.
@@ -78,6 +87,8 @@ before launching Meshroom; it overrides the plugin default:
 ```bash
 export RNB_NEUS2_TESTBED_PATH=/path/to/RNb-NeuS2/build/testbed
 ```
+
+On Windows (PowerShell): `$env:RNB_NEUS2_TESTBED_PATH = "C:\path\to\RNb-NeuS2\build\testbed.exe"`.
 
 Updating or reinstalling the plugin from the plugin manager replaces its folder,
 `RNb-NeuS2/` included: extract the release archive again afterwards, or keep it
