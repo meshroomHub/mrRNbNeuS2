@@ -239,7 +239,12 @@ It needs these plugins besides mrRNbNeuS2:
 - [mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node
   `ImageSegmentationSam3`), not in the plugin registry yet: install it by hand.
 
-Set the SAM 3 prompt (`ImageSegmentationSam3_1`, default `stone`) to your object.
+Images: one folder per pose, holding the single-light images and one reference image
+lit by all the lights, whose filename contains `ambient` (CameraInit makes it the pose
+reference) and `all_leds` (`SfMFilter_1` keeps these images for the structure from
+motion and the segmentation). The photometric stereo nodes take the pose mask from the
+reference image only and do not use it as a lighting image. Set the SAM 3 prompt
+(`ImageSegmentationSam3_1`, default `stone`) to your object.
 
 ## Command-line equivalent
 

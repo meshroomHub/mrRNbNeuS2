@@ -1040,7 +1040,9 @@
             ],
             "inputs": {
                 "inputSfm": "{ExportImages_1.outputSfMData}",
-                "downscale": 2
+                "downscale": 2,
+                "excludePoseReferenceImage": true,
+                "maskPoseReferenceOnly": true
             }
         },
         "RNbNeuS2_1": {
@@ -1090,7 +1092,9 @@
                 149
             ],
             "inputs": {
-                "inputSfm": "{ExportImages_1.outputSfMData}"
+                "inputSfm": "{ExportImages_1.outputSfMData}",
+                "excludePoseReferenceImage": true,
+                "maskPoseReferenceOnly": true
             }
         },
         "SfMFilter_1": {
@@ -1138,7 +1142,9 @@
                 378
             ],
             "inputs": {
-                "inputSfm": "{ExportImages_1.outputSfMData}"
+                "inputSfm": "{ExportImages_1.outputSfMData}",
+                "excludePoseReferenceImage": true,
+                "maskPoseReferenceOnly": true
             }
         }
     }
