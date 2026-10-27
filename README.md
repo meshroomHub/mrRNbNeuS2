@@ -222,6 +222,25 @@ SfMData cameras.
    albedos, the harmonized albedo maps on `Harmonized Albedo Folder` /
    `Harmonized Albedo SfMData` (to texture the mesh, see above).
 
+### Pipeline template
+
+`meshroom/template_linosdmuni_rnbneus2.mgt` (listed in Meshroom's pipeline templates)
+runs the structure-from-motion of AliceVision, segments the object with SAM 3, then
+estimates the normals with three methods, each followed by an `RNbNeuS2` node (quick
+settings: 1000 steps, resolution 512), to compare the three meshes:
+
+- LINO-UniPS (normals) → `RNbNeuS2_1`,
+- SDM-UniPS (normals and albedos) → `RNbNeuS2_2`,
+- Uni-MS-PS (normals) → `RNbNeuS2_3`.
+
+It needs these plugins besides mrRNbNeuS2:
+
+- `mr-lino-unips`, `mr-sdm-unips` and `mr-uni-ms-ps`, from Meshroom's plugin manager;
+- [mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node
+  `ImageSegmentationSam3`), not in the plugin registry yet: install it by hand.
+
+Set the SAM 3 prompt (`ImageSegmentationSam3_1`, default `stone`) to your object.
+
 ## Command-line equivalent
 
 The node is a thin wrapper around the standalone RNb-NeuS2 pipeline
