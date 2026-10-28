@@ -57,7 +57,7 @@ package pinned in `pyproject.toml`.
 
 The compiled testbed is not installed by the plugin manager yet. Download the
 archive matching your OS from the
-[RNb-NeuS2 v2.0.1 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.1),
+[RNb-NeuS2 v2.0.2 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.2),
 check its SHA-256 against the one shown on the release page, and extract it into the
 plugin folder:
 
@@ -65,16 +65,16 @@ Linux:
 
 ```bash
 cd /path/to/plugins/mrRNbNeuS2
-sha256sum /path/to/RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz
-tar xzf /path/to/RNb-NeuS2-2.0.1-linux-x86_64-cu124-py311.tar.gz   # gives mrRNbNeuS2/RNb-NeuS2/build/testbed
+sha256sum /path/to/RNb-NeuS2-2.0.2-linux-x86_64-cu124-py311.tar.gz
+tar xzf /path/to/RNb-NeuS2-2.0.2-linux-x86_64-cu124-py311.tar.gz   # gives mrRNbNeuS2/RNb-NeuS2/build/testbed
 ```
 
 Windows (PowerShell):
 
 ```powershell
 cd C:\path\to\plugins\mrRNbNeuS2
-Get-FileHash C:\path\to\RNb-NeuS2-2.0.1-windows-x86_64-cu124-py311.zip   # SHA256
-Expand-Archive C:\path\to\RNb-NeuS2-2.0.1-windows-x86_64-cu124-py311.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
+Get-FileHash C:\path\to\RNb-NeuS2-2.0.2-windows-x86_64-cu124-py311.zip   # SHA256
+Expand-Archive C:\path\to\RNb-NeuS2-2.0.2-windows-x86_64-cu124-py311.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
 ```
 
 The node then finds `RNb-NeuS2/build/testbed` (`testbed.exe` on Windows; default of `RNB_NEUS2_TESTBED_PATH`

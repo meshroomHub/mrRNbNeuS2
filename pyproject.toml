@@ -1,6 +1,6 @@
 [project]
 name = "mrRNbNeuS2"
-version = "1.0.1"
+version = "1.0.2"
 description = "Meshroom plugin for RNb-NeuS2 neural surface reconstruction from normal and reflectance maps."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,11 +16,11 @@ dependencies = [
 package = false
 
 [tool.uv.sources]
-rnb-neus2 = { git = "https://github.com/meshroomHubWarehouse/RNb-NeuS2.git", tag = "v2.0.1" }
+rnb-neus2 = { git = "https://github.com/meshroomHubWarehouse/RNb-NeuS2.git", tag = "v2.0.2" }
 
 [tool.meshroom]
 publisher = "meshroomHub"
-requirements = "Nvidia GPU with CUDA >= 12.4. The RNb-NeuS2 testbed from the RNb-NeuS2 v2.0.1 release (see README)."
+requirements = "Nvidia GPU with CUDA >= 12.4. The RNb-NeuS2 testbed from the RNb-NeuS2 v2.0.2 release (see README)."
 # Testbed of the RNb-NeuS2 release extracted into the plugin folder, relative to the plugin root.
 # An environment variable of the same name overrides it.
 env = [ { key = "RNB_NEUS2_TESTBED_PATH", type = "path", value = "RNb-NeuS2/build/testbed" } ]
