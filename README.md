@@ -34,7 +34,8 @@ Python package and the CUDA `testbed`) lives in
 
 ## Requirements
 
-- **[Meshroom](https://github.com/alicevision/Meshroom)** 2025+ (develop branch)
+- **[Meshroom](https://github.com/alicevision/Meshroom)** 2026.1 or later (develop branch until its release):
+  Meshroom 2025.1.x has neither the plugin manager nor the `[tool.meshroom]` settings of `pyproject.toml`
 - **NVIDIA GPU** with a driver supporting CUDA 12.4 (prebuilt testbed for compute
   capabilities 7.5, 8.0, 8.6 and 8.9)
 - **Python** 3.11 for the prebuilt testbed archive (the Python of Meshroom)
