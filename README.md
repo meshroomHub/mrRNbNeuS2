@@ -36,9 +36,9 @@ Python package and the CUDA `testbed`) lives in
 
 - **[Meshroom](https://github.com/alicevision/Meshroom)** 2026.1 or later (develop branch until its release):
   Meshroom 2025.1.x has neither the plugin manager nor the `[tool.meshroom]` settings of `pyproject.toml`
-- **NVIDIA GPU** with a driver supporting CUDA 12.4 (prebuilt testbed for compute
-  capabilities 7.5, 8.0, 8.6 and 8.9)
-- **Python** 3.11 for the prebuilt testbed archive (the Python of Meshroom)
+- **NVIDIA GPU** with a driver supporting CUDA 12 (570 or newer for RTX 50xx); prebuilt testbed for compute
+  capabilities 7.5, 8.0, 8.6, 8.9, 9.0 and 12.0
+- **Linux**: glibc 2.34 or newer (Ubuntu 22.04, Rocky / RHEL 9 and newer) for the prebuilt testbed
 
 ## Installation
 
@@ -57,7 +57,7 @@ package pinned in `pyproject.toml`.
 
 The compiled testbed is not installed by the plugin manager yet. Download the
 archive matching your OS from the
-[RNb-NeuS2 v2.0.2 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.2),
+[RNb-NeuS2 v2.0.3 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.3),
 check its SHA-256 against the one shown on the release page, and extract it into the
 plugin folder:
 
@@ -65,22 +65,21 @@ Linux:
 
 ```bash
 cd /path/to/plugins/mrRNbNeuS2
-sha256sum /path/to/RNb-NeuS2-2.0.2-linux-x86_64-cu124-py311.tar.gz
-tar xzf /path/to/RNb-NeuS2-2.0.2-linux-x86_64-cu124-py311.tar.gz   # gives mrRNbNeuS2/RNb-NeuS2/build/testbed
+sha256sum /path/to/RNb-NeuS2-2.0.3-linux-x86_64-cu128.tar.gz
+tar xzf /path/to/RNb-NeuS2-2.0.3-linux-x86_64-cu128.tar.gz   # gives mrRNbNeuS2/RNb-NeuS2/build/testbed
 ```
 
 Windows (PowerShell):
 
 ```powershell
 cd C:\path\to\plugins\mrRNbNeuS2
-Get-FileHash C:\path\to\RNb-NeuS2-2.0.2-windows-x86_64-cu124-py311.zip   # SHA256
-Expand-Archive C:\path\to\RNb-NeuS2-2.0.2-windows-x86_64-cu124-py311.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
+Get-FileHash C:\path\to\RNb-NeuS2-2.0.3-windows-x86_64-cu128.zip   # SHA256
+Expand-Archive C:\path\to\RNb-NeuS2-2.0.3-windows-x86_64-cu128.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
 ```
 
 The node then finds `RNb-NeuS2/build/testbed` (`testbed.exe` on Windows; default of `RNB_NEUS2_TESTBED_PATH`
-in `pyproject.toml`, relative to the plugin root). Only `build/`, `configs/` and
-`utils/` of the archive are used: the testbed reads its MLP weights from
-`../utils/` next to `build/`.
+in `pyproject.toml`, relative to the plugin root). The archive holds the compiled testbed
+only: `build/` and the `configs/` and `utils/` folders it reads next to `build/`.
 
 To keep the testbed elsewhere (e.g. a local build), set the environment variable
 before launching Meshroom; it overrides the plugin default:
