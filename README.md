@@ -1,44 +1,31 @@
-<div align="center">
-
 # mrRNbNeuS2
 
-### Meshroom Plugin for RNb-NeuS2
+Meshroom plugin for [RNb-NeuS2](https://github.com/meshroomHubWarehouse/RNb-NeuS2): neural surface reconstruction from
+multi-view normal and reflectance maps (R. Bruneau, B. Brument et al., IJCV 2025).
 
-<p>
-Integrate <a href="https://github.com/meshroomHubWarehouse/RNb-NeuS2">RNb-NeuS2</a> neural surface reconstruction from multi-view normal and reflectance maps directly into your <a href="https://github.com/alicevision/Meshroom">Meshroom</a> photogrammetry pipeline.
-</p>
+The node reads AliceVision SfMData, trains the CUDA testbed and exports the mesh in world coordinates. With albedo maps,
+it also exports them scaled as for training (harmonized), ready to texture the mesh with the AliceVision `Texturing` node
+(see [Texturing the mesh with the albedo maps](#texturing-the-mesh-with-the-albedo-maps)). This repository holds the
+Meshroom side only: the reconstruction code lives in [RNb-NeuS2](https://github.com/meshroomHubWarehouse/RNb-NeuS2) (fork
+of [RobinBruneau/RNb-NeuS2](https://github.com/RobinBruneau/RNb-NeuS2)).
 
-<a href="https://github.com/meshroomHubWarehouse/RNb-NeuS2"><img src="https://img.shields.io/badge/Core-RNb--NeuS2-green" alt="RNb-NeuS2" height="25"></a>
-
-</div>
+| Node | Step | Output |
+|------|------|--------|
+| `RNbNeuS2` | Mesh from normal maps, and optional albedo maps and masks | `mesh.obj`, harmonized albedo maps, `albedoHarmonized.sfm` |
 
 ---
 
-## Overview
-
-A single node is provided:
-
-**`RNbNeuS2`** (category *Neural Reconstruction*): neural surface reconstruction
-from multi-view normal and reflectance maps. It runs the **entire** pipeline
-internally: it reads AliceVision SfMData, converts them to the testbed format,
-normalizes the scene into the unit sphere, trains the CUDA testbed (two-stage, with
-optional multi-view albedo scaling), and exports the mesh in world coordinates.
-No separate data-preparation node is needed. With albedo maps, it also exports them
-scaled as for training (harmonized), ready to texture the mesh with the AliceVision
-`Texturing` node (see [Texturing the mesh with the albedo maps](#texturing-the-mesh-with-the-albedo-maps)).
-
-This repository holds the Meshroom side only. The reconstruction code (the `rnb_neus2`
-Python package and the CUDA `testbed`) lives in
-[RNb-NeuS2](https://github.com/meshroomHubWarehouse/RNb-NeuS2) (fork of
-[RobinBruneau/RNb-NeuS2](https://github.com/RobinBruneau/RNb-NeuS2)).
-
 ## Requirements
 
-- **[Meshroom](https://github.com/alicevision/Meshroom)** 2026.1 or later (develop branch until its release):
-  Meshroom 2025.1.x has neither the plugin manager nor the `[tool.meshroom]` settings of `pyproject.toml`
+- **[Meshroom](https://github.com/alicevision/Meshroom)** 2026.1 or later (develop branch until its release, tested on
+  commit [`edc4b6a2`](https://github.com/alicevision/Meshroom/commit/edc4b6a2)): Meshroom 2025.1.x has neither the plugin
+  manager nor the `[tool.meshroom]` settings of `pyproject.toml`
 - **NVIDIA GPU** with a driver supporting CUDA 12 (570 or newer for RTX 50xx); prebuilt testbed for compute
   capabilities 7.5, 8.0, 8.6, 8.9, 9.0 and 12.0
+- **Python** 3.10 or newer
 - **Linux**: glibc 2.34 or newer (Ubuntu 22.04, Rocky / RHEL 9 and newer) for the prebuilt testbed
+
+---
 
 ## Installation
 
@@ -50,20 +37,15 @@ From Meshroom's plugin manager (*Manage Plugins*), or from the command line:
 meshroom_plugins install mrRNbNeuS2
 ```
 
-The installer creates the plugin `venv/` with `uv sync`; it installs the `rnb_neus2`
-package pinned in `pyproject.toml`.
+The installer creates the plugin `venv/` with `uv sync`; it installs the `rnb_neus2` package pinned in `pyproject.toml`.
+The `RNbNeuS2` node then appears in the *Neural Reconstruction* category.
 
-### 2. Install the RNb-NeuS2 testbed
+### 2. Install the testbed
 
-The plugin manager installs the compiled testbed with the plugin, when it supports
-release assets: it picks the archive of your OS, checks its SHA-256 and extracts it
-into `RNb-NeuS2/`. There is nothing else to do.
-
-Otherwise, the `testbed` asset of `pyproject.toml` is ignored with a warning, and the
-archive is installed by hand. Download the archive matching your OS from the
-[RNb-NeuS2 v2.0.3 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.3),
-check its SHA-256 against the one shown on the release page, and extract it into the
-plugin folder:
+Automatic download of the compiled testbed by the plugin manager is work in progress and coming soon. For now, install
+it by hand (the warning about the `testbed` asset during the plugin install is expected): download the archive matching
+your OS from the [RNb-NeuS2 v2.0.3 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.3), check its
+SHA-256 against the one shown on the release page, and extract it into the plugin folder:
 
 Linux:
 
@@ -81,24 +63,12 @@ Get-FileHash C:\path\to\RNb-NeuS2-2.0.3-windows-x86_64-cu128.zip   # SHA256
 Expand-Archive C:\path\to\RNb-NeuS2-2.0.3-windows-x86_64-cu128.zip -DestinationPath .   # gives mrRNbNeuS2\RNb-NeuS2\build\testbed.exe
 ```
 
-The node then finds `RNb-NeuS2/build/testbed` (`testbed.exe` on Windows; default of `RNB_NEUS2_TESTBED_PATH`
-in `pyproject.toml`, relative to the plugin root). The archive holds the compiled testbed
-only: `build/` and the `configs/` and `utils/` folders it reads next to `build/`.
+The node then finds `RNb-NeuS2/build/testbed` (`testbed.exe` on Windows). Updating or reinstalling the plugin replaces the
+plugin folder, `RNb-NeuS2/` included: extract the archive again afterwards.
 
-To keep the testbed elsewhere (e.g. a local build), set the environment variable
-before launching Meshroom; it overrides the plugin default:
+### 3. Manual install (without the plugin manager)
 
-```bash
-export RNB_NEUS2_TESTBED_PATH=/path/to/RNb-NeuS2/build/testbed
-```
-
-On Windows (PowerShell): `$env:RNB_NEUS2_TESTBED_PATH = "C:\path\to\RNb-NeuS2\build\testbed.exe"`.
-
-A plugin manager without release assets replaces the plugin folder when updating or
-reinstalling it, `RNb-NeuS2/` included: extract the release archive again afterwards,
-or keep it outside the plugin folder with `RNB_NEUS2_TESTBED_PATH`.
-
-### Manual install (without the plugin manager)
+Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
 cd /path/to/plugins
@@ -106,12 +76,56 @@ git clone https://github.com/meshroomHub/mrRNbNeuS2.git
 cd mrRNbNeuS2
 UV_PROJECT_ENVIRONMENT=venv uv sync   # Meshroom looks for venv/ at the plugin root
 # then step 2 above
-export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2
+export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2:$MESHROOM_PLUGINS_PATH
 ```
 
-## Node: `RNbNeuS2`
+On Windows (PowerShell): `$env:UV_PROJECT_ENVIRONMENT = "venv"; uv sync`, then
+`$env:MESHROOM_PLUGINS_PATH = "C:\path\to\plugins\mrRNbNeuS2"`.
 
-### Inputs
+---
+
+## Pipeline template
+
+`meshroom/linoUniPsRnbNeus2.mgt` (*File > New Pipeline > Lino Uni Ps Rnb Neus2*) runs the structure-from-motion of
+AliceVision, segments the object with SAM 3, exports the undistorted images, estimates the normals with `LINOUniPS` and
+reconstructs the mesh with `RNbNeuS2` (quick settings: 1000 steps, resolution 512).
+
+It needs [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS), from Meshroom's plugin manager, and
+[mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node `ImageSegmentationSam3`), not in the plugin
+registry yet: install it by hand.
+
+CameraInit groups the images of a folder into one pose only if the folder name starts with `PS_`. Elsewhere, each image
+becomes its own pose and the photometric stereo nodes find no multi-lighting pose, so images must follow this layout:
+
+```
+dataset/
+└── PS/
+    ├── PS_01/
+    │   ├── ambient_all_leds.jpg   # reference image, lit by all the lights
+    │   ├── led_01.jpg             # single-light images
+    │   ├── led_02.jpg
+    │   └── ...
+    ├── PS_02/
+    └── ...
+```
+
+The filename of the reference image must contain `ambient` (CameraInit makes it the pose reference) and `all_leds`
+(`SfMFilter_1` keeps these images for the structure from motion and the segmentation).
+
+Drag and drop the parent folder `dataset/` into the Image Gallery of Meshroom, then set the SAM 3 prompt
+(`ImageSegmentationSam3_1`, default `stone`) to your object.
+
+---
+
+## Nodes
+
+### `RNbNeuS2`
+
+Connect *Normal Maps SfMData* (required), *Albedo Maps SfMData* and *Mask SfMData* or *Mask Folder* (optional) to the
+outputs of a photometric stereo node, e.g. [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS) or
+[mrLedGetter](https://github.com/meshroomHub/mrLedGetter), then compute the node.
+
+#### Inputs
 
 | Parameter | Label | Default | Description |
 |-----------|-------|---------|-------------|
@@ -133,7 +147,7 @@ export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2
 | `rnbNeuS2Path` | RNb-NeuS2 Testbed Path | `${RNB_NEUS2_TESTBED_PATH}` | Path to the testbed executable (advanced; from `pyproject.toml` or the environment). |
 | `verboseLevel` | Verbose Level | `info` | Logging verbosity (`fatal`, `error`, `warning`, `info`, `debug`, `trace`). |
 
-### Outputs
+#### Outputs
 
 | Parameter | Label | Description |
 |-----------|-------|-------------|
@@ -142,139 +156,117 @@ export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2
 | `outputAlbedoFolder` | Harmonized Albedo Folder | `albedo/<viewId>.exr`: the input albedo maps multiplied by the per-view scales used for training, as linear float EXR (not clipped), extended 8 px outside the masks. Written only when `inputAlbedoSfm` is set (the attribute is disabled otherwise). |
 | `outputAlbedoSfm` | Harmonized Albedo SfMData | `albedoHarmonized.sfm`: copy of the Albedo Maps SfMData (JSON) whose views point to these maps (views without a map are dropped). Written only when `inputAlbedoSfm` is set. |
 
-The outputs do not take part in the node UID: projects computed with a previous
-version keep their cache (the harmonized albedo outputs are then missing until the
-node is recomputed).
+---
 
 ## Albedo scaling
 
-Photometric-stereo albedo maps are relative: each view is known up to a per-channel
-scale (e.g. the light powers of each pose). When an Albedo Maps SfMData is given,
-the node trains a geometry-only phase 1, then estimates one scale per view and
-channel on the phase-1 mesh (`rnb_neus2/albedo_scaling.py` in RNb-NeuS2,
-`compute_albedo_scale_ratios`), rescales the albedos and trains phase 3 with them:
+Photometric-stereo albedo maps are known up to one scale per view and channel. With an Albedo Maps SfMData, the node
+trains on the geometry first, then solves these scales jointly from all the view pairs that see the same mesh points
+and trains on the rescaled albedos (`compute_albedo_scale_ratios` in RNb-NeuS2; the scales are kept in
+`prepared_data/albedo_scales.json`).
 
-- 20000 masked pixels per view are ray-cast onto the mesh; each hit is compared with
-  **every other view** that sees it (in front, inside the image, facing it with a
-  viewing angle <= 60 deg, unoccluded, inside its mask, valid albedos in both views);
-- every view pair with >= 300 shared samples gives one equation
-  `log s_i - log s_j = -median(log a_i - log a_j)`, weighted by `sqrt(n_samples)`;
-- the equations are solved jointly (least squares): the result does not depend on the
-  order of the views and loops of views are closed; the scales are normalized to an
-  arithmetic mean of 1 (same albedo level as before the scaling). Views without any
-  overlap keep the scale 1 (warning in the log); separate groups of overlapping views
-  are normalized independently (warning).
-
-The log reports the median pairwise albedo mismatch before/after the scaling and, per
-view, the scale and the fraction of masked pixels clipped in the 16-bit training PNGs
-(the testbed reads the albedos in [0, 1], and with RGB+ its loss depends on the
-absolute albedo level, so the level is kept and values above 1 are clipped; the
-exported EXR maps are not clipped). `prepared_data/albedo_scales.json` keeps the
-scales and the pair statistics, `prepared_data/frames.json` the mapping between the
-testbed images (`albedos/00003.png`) and the input views (`pose_id`,
-`albedo_view_id`, source paths).
-
-On a 12-pose LED-getter turntable capture (biface), the previous scaling, which
-chained each view to the next one in the SfMData (viewId) order, compared views on
-opposite sides of the object and left a view 1.5x too bright with respect to the views
-seeing the same surface; the joint solve brings the median pairwise mismatch from
-22% (raw) to 5-6% (vs 12% with the chain).
+---
 
 ## Texturing the mesh with the albedo maps
 
-```
-LedGetterPS ─Normal/Albedo SfMData, Mask Folder─► RNbNeuS2 ─Harmonized Albedo SfMData─► Texturing.input
-                                                           ─Harmonized Albedo Folder──► Texturing.imagesFolder
-                                                           ─Output Mesh───────────────► Texturing.inputMesh
-```
+Add the AliceVision nodes `MeshRemoveUnseenFaces` (on the mesh, otherwise the atlases can come out empty), then
+`Texturing`, with these settings:
 
-The scales of the texture are those of the training. `Texturing` settings for a mesh
-that does not come from `Meshing` and an SfMData without landmarks:
+| Parameter | Value | Why |
+|-----------|-------|-----|
+| `input` | *Harmonized Albedo SfMData* | Cameras of the albedo maps |
+| `imagesFolder` | *Harmonized Albedo Folder* | Required: no texture is written otherwise |
+| `visibilityRemappingMethod` | `MeshItself` | The SfMData has no landmarks |
+| `subdivisionTargetRatio` | `0` | The default aborts without landmarks |
+| `workingColorSpace` | `Linear` | The albedo maps are linear |
+| `correctEV` | off | The albedo maps are not exposures |
+| `textureSide` / `downscale` | 4096 / 1 | |
+| `colorMappingFileType` | `exr` (linear data) or `png` (preview) | |
 
-| Texturing parameter | Value | Why |
-|---------------------|-------|-----|
-| `input` | `RNbNeuS2` *Harmonized Albedo SfMData* | Cameras of the albedo maps. |
-| `imagesFolder` | `RNbNeuS2` *Harmonized Albedo Folder* | Must be **non-empty**: the *Color Mapping* group is disabled otherwise, `--colorMappingFileType` is not passed and `aliceVision_texturing` writes no texture. Files are matched by `<viewId>`. |
-| `inputMesh` | `RNbNeuS2` *Output Mesh* | No transform needed (see below). |
-| `visibilityRemappingMethod` | `MeshItself` | The default `PullPush` remaps the visibilities of the SfM landmarks and stops with *"Cannot remap visibilities as there is no reference points"*. `MeshItself` ray-casts the visibility of every vertex. |
-| `subdivisionTargetRatio` | `0` | The subdivision targets the (empty) landmark cloud: with the default 0.8 the binary writes its outputs, then aborts (*corrupted double-linked list*, exit 134) and the node fails. The RNbNeuS2 mesh is dense anyway. |
-| `workingColorSpace` | `Linear` | Blend the linear albedo in linear space. |
-| `outputColorSpace` | `AUTO` | EXR texture: linear albedo; PNG texture: sRGB-encoded, directly viewable. |
-| `colorMapping.colorMappingFileType` | `exr` (data) or `png` (preview) | Use two `Texturing` nodes for both. |
-| `correctEV` | off | The albedo maps are not exposures. |
-| `unwrapMethod` | `Basic` | LSCM/ABF are limited to 600k/300k faces. |
-| `textureSide` / `downscale` | 4096 / 1 | With half-resolution albedo maps, `Basic` fills ~25% of a 4096 atlas (one tile); 2048 spills over several UDIM tiles. |
+---
 
-Why EXR: photometric-stereo nodes write 16-bit PNG albedos with **linear** values,
-but AliceVision reads any untagged 8/16-bit PNG as sRGB. The harmonized EXR maps are
-read as linear data, so the texture color space is right.
+## Development
 
-The mesh needs no transform: `RNbNeuS2` exports its mesh with y and z negated with
-respect to the SfMData world, which is the AliceVision mesh-file convention
-(`Meshing`, `MeshFiltering`, `Texturing`), so `Texturing` places it correctly with the
-SfMData cameras.
+### Command line
 
-## Usage in Meshroom
+The node wraps the `rnb-neus2` script of the plugin venv: see the [RNb-NeuS2 README](https://github.com/meshroomHubWarehouse/RNb-NeuS2#readme)
+to run the same reconstruction without Meshroom.
 
-1. Produce per-view normal maps (and optionally albedo/reflectance maps) and bring
-   them into the graph as SfMData.
-2. Add an **`RNbNeuS2`** node and connect:
-   - `Normal Maps SfMData` ← your normals SfMData (required),
-   - `Albedo Maps SfMData` ← albedo SfMData (optional, for reflectance-based training),
-   - `Mask SfMData` *or* `Mask Folder` ← masks (optional).
-3. Compute the node. The reconstructed mesh is exposed on `Output Mesh`; with
-   albedos, the harmonized albedo maps on `Harmonized Albedo Folder` /
-   `Harmonized Albedo SfMData` (to texture the mesh, see above).
+### Working on a local RNb-NeuS2 clone
 
-### Pipeline template
-
-`meshroom/template_linosdmuni_rnbneus2.mgt` (listed in Meshroom's pipeline templates)
-runs the structure-from-motion of AliceVision, segments the object with SAM 3, then
-estimates the normals with three methods, each followed by an `RNbNeuS2` node (quick
-settings: 1000 steps, resolution 512), to compare the three meshes:
-
-- LINO-UniPS (normals) → `RNbNeuS2_1`,
-- SDM-UniPS (normals and albedos) → `RNbNeuS2_2`,
-- Uni-MS-PS (normals) → `RNbNeuS2_3`.
-
-It needs these plugins besides mrRNbNeuS2:
-
-- `mr-lino-unips`, `mr-sdm-unips` and `mr-uni-ms-ps`, from Meshroom's plugin manager;
-- [mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node
-  `ImageSegmentationSam3`), not in the plugin registry yet: install it by hand.
-
-Images: one folder per pose, holding the single-light images and one reference image
-lit by all the lights, whose filename contains `ambient` (CameraInit makes it the pose
-reference) and `all_leds` (`SfMFilter_1` keeps these images for the structure from
-motion and the segmentation). The photometric stereo nodes take the pose mask from the
-reference image only and do not use it as a lighting image. Set the SAM 3 prompt
-(`ImageSegmentationSam3_1`, default `stone`) to your object.
-
-## Command-line equivalent
-
-The node is a thin wrapper around the standalone RNb-NeuS2 pipeline
-(`rnb-neus2` script of the plugin venv). The same reconstruction can be launched
-without Meshroom:
+The node imports the `rnb_neus2` package from the plugin `venv/`. To run a local clone instead, install it in editable mode in that venv:
 
 ```bash
-# From SfMData (normals only)
-venv/bin/rnb-neus2 --input normals.sfm --testbed RNb-NeuS2/build/testbed --output out/
-
-# From SfMData with reflectance (two-phase + albedo scaling), exporting the
-# harmonized albedo maps for texturing
-venv/bin/rnb-neus2 --input normals.sfm --albedo-sfm albedos.sfm \
-    --mask-sfm masks.sfm --has-albedo --testbed RNb-NeuS2/build/testbed --output out/ \
-    --harmonized-albedo-folder out/albedo --harmonized-albedo-sfm out/albedoHarmonized.sfm
+uv pip install --python venv/bin/python -e /path/to/RNb-NeuS2
 ```
 
-## Notes
+Updating or reinstalling the plugin from the plugin manager recreates `venv/`: run this command again afterwards.
 
-- The node works entirely in unit-sphere coordinates internally and exports the
-  mesh back to world coordinates.
-- Scene normalization is automatic (`auto` prefers silhouettes when masks are
-  available, then falls back to 3D landmarks or camera centers).
-- Albedo scaling runs only when an Albedo SfMData is provided (see
-  [Albedo scaling](#albedo-scaling)).
+To use a local build of the testbed, set the environment variable before launching Meshroom (it overrides the plugin
+default):
+
+```bash
+export RNB_NEUS2_TESTBED_PATH=/path/to/RNb-NeuS2/build/testbed
+```
+
+On Windows (PowerShell): `$env:RNB_NEUS2_TESTBED_PATH = "C:\path\to\RNb-NeuS2\build\testbed.exe"`.
+
+### Plugin structure
+
+```
+mrRNbNeuS2/
+├── meshroom/
+│   ├── linoUniPsRnbNeus2.mgt      # Pipeline template
+│   └── RNb-NeuS2/
+│       ├── __init__.py
+│       └── RNbNeuS2.py            # Meshroom node definition
+├── RNb-NeuS2/                     # Compiled testbed (release archive)
+├── venv/                          # Created by the installer or by uv sync
+├── pyproject.toml                 # Dependencies and Meshroom settings (uv)
+└── README.md
+```
+
+For more details on how Meshroom plugins work, see:
+- [Meshroom Plugin Install Guide](https://github.com/alicevision/Meshroom/blob/develop/INSTALL_PLUGINS.md)
+- [mrHelloWorld](https://github.com/meshroomHub/mrHelloWorld): step-by-step tutorials for building Meshroom plugins
+
+---
+
+## Acknowledgements
+
+This work is supported by [**DOPAMIn**](https://www.cnrsinnovation.com/actualite/une-seconde-promotion-pour-le-programme-open-7-nouveaux-logiciels-scientifiques-a-valoriser/) (*Diffusion Open de Photogrammetrie par AliceVision/Meshroom pour l'Industrie*), selected in the 2024 cohort of the [**OPEN**](https://www.cnrsinnovation.com/open/) programme run by [CNRS Innovation](https://www.cnrsinnovation.com/). OPEN supports the valorization of open-source scientific software by providing dedicated developer resources, governance expertise, and industry partnership support.
+
+**Lead researcher:** [Jean-Denis Durou](https://cv.hal.science/jean-denis-durou), [IRIT](https://www.irit.fr/) (INP-Toulouse)
+**Co-lead:** [Lilian Calvet](https://fr.linkedin.com/in/lilian-calvet-42b1a689), [Balgrist University Hospital](https://www.balgrist.ch/)
+
+---
+
+## Related Projects
+
+| Project | Description |
+|---------|-------------|
+| [RNb-NeuS2](https://github.com/meshroomHubWarehouse/RNb-NeuS2) | Neural surface reconstruction from normal and reflectance maps (IJCV 2025) |
+| [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS) | Meshroom plugin for LINO-UniPS photometric stereo |
+| [mrSDMUniPS](https://github.com/meshroomHub/mrSDMUniPS) | Meshroom plugin for SDM-UniPS photometric stereo |
+| [mrUniMSPS](https://github.com/meshroomHub/mrUniMSPS) | Meshroom plugin for Uni-MS-PS photometric stereo |
+| [mrLedGetter](https://github.com/meshroomHub/mrLedGetter) | Meshroom plugin for LED-getter near-light photometric stereo |
+| [mrOpenRNb](https://github.com/meshroomHub/mrOpenRNb) | Meshroom plugin for Open-RNb neural surface reconstruction |
+
+---
+
+## Citation
+
+- **Multi-view Surface Reconstruction Using Normal and Reflectance Cues**  
+  R. Bruneau, B. Brument, Y. Quéau, J. Mélou, F. B. Lauze, J.-D. Durou, L. Calvet (2025)  
+  In *International Journal of Computer Vision (IJCV)*.  
+  [arXiv](https://arxiv.org/abs/2506.04115)
+
+- **RNb-NeuS: Reflectance and Normal-based Multi-View 3D Reconstruction**  
+  B. Brument, R. Bruneau, Y. Quéau, J. Mélou, F. Lauze, J.-D. Durou, L. Calvet (2024)  
+  In *IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*.  
+  [Project page](https://robinbruneau.github.io/publications/rnb_neus.html)
+
+---
 
 ## License
 
