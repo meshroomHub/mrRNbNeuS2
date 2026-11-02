@@ -106,7 +106,7 @@ git clone https://github.com/meshroomHub/mrRNbNeuS2.git
 cd mrRNbNeuS2
 UV_PROJECT_ENVIRONMENT=venv uv sync   # Meshroom looks for venv/ at the plugin root
 # then step 2 above
-export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2
+export MESHROOM_PLUGINS_PATH=/path/to/plugins/mrRNbNeuS2:$MESHROOM_PLUGINS_PATH
 ```
 
 ## Node: `RNbNeuS2`
@@ -148,133 +148,81 @@ node is recomputed).
 
 ## Albedo scaling
 
-Photometric-stereo albedo maps are relative: each view is known up to a per-channel
-scale (e.g. the light powers of each pose). When an Albedo Maps SfMData is given,
-the node trains a geometry-only phase 1, then estimates one scale per view and
-channel on the phase-1 mesh (`rnb_neus2/albedo_scaling.py` in RNb-NeuS2,
-`compute_albedo_scale_ratios`), rescales the albedos and trains phase 3 with them:
-
-- 20000 masked pixels per view are ray-cast onto the mesh; each hit is compared with
-  **every other view** that sees it (in front, inside the image, facing it with a
-  viewing angle <= 60 deg, unoccluded, inside its mask, valid albedos in both views);
-- every view pair with >= 300 shared samples gives one equation
-  `log s_i - log s_j = -median(log a_i - log a_j)`, weighted by `sqrt(n_samples)`;
-- the equations are solved jointly (least squares): the result does not depend on the
-  order of the views and loops of views are closed; the scales are normalized to an
-  arithmetic mean of 1 (same albedo level as before the scaling). Views without any
-  overlap keep the scale 1 (warning in the log); separate groups of overlapping views
-  are normalized independently (warning).
-
-The log reports the median pairwise albedo mismatch before/after the scaling and, per
-view, the scale and the fraction of masked pixels clipped in the 16-bit training PNGs
-(the testbed reads the albedos in [0, 1], and with RGB+ its loss depends on the
-absolute albedo level, so the level is kept and values above 1 are clipped; the
-exported EXR maps are not clipped). `prepared_data/albedo_scales.json` keeps the
-scales and the pair statistics, `prepared_data/frames.json` the mapping between the
-testbed images (`albedos/00003.png`) and the input views (`pose_id`,
-`albedo_view_id`, source paths).
-
-On a 12-pose LED-getter turntable capture (biface), the previous scaling, which
-chained each view to the next one in the SfMData (viewId) order, compared views on
-opposite sides of the object and left a view 1.5x too bright with respect to the views
-seeing the same surface; the joint solve brings the median pairwise mismatch from
-22% (raw) to 5-6% (vs 12% with the chain).
+Photometric-stereo albedo maps are known up to one scale per view and channel. With an Albedo Maps SfMData, the node
+trains on the geometry first, then solves these scales jointly from all the view pairs that see the same mesh points
+and trains on the rescaled albedos (`compute_albedo_scale_ratios` in RNb-NeuS2; the scales are kept in
+`prepared_data/albedo_scales.json`).
 
 ## Texturing the mesh with the albedo maps
 
-```
-LedGetterPS ─Normal/Albedo SfMData, Mask Folder─► RNbNeuS2 ─Harmonized Albedo SfMData─► Texturing.input
-                                                           ─Harmonized Albedo Folder──► Texturing.imagesFolder
-                                                           ─Output Mesh───────────────► Texturing.inputMesh
-```
+Add the AliceVision nodes `MeshRemoveUnseenFaces` (on the mesh, otherwise the atlases can come out empty), then
+`Texturing`. The mesh needs no transform: `RNbNeuS2` exports it in the AliceVision mesh-file convention. `Texturing`
+settings:
 
-The scales of the texture are those of the training. `Texturing` settings for a mesh
-that does not come from `Meshing` and an SfMData without landmarks:
-
-| Texturing parameter | Value | Why |
-|---------------------|-------|-----|
-| `input` | `RNbNeuS2` *Harmonized Albedo SfMData* | Cameras of the albedo maps. |
-| `imagesFolder` | `RNbNeuS2` *Harmonized Albedo Folder* | Must be **non-empty**: the *Color Mapping* group is disabled otherwise, `--colorMappingFileType` is not passed and `aliceVision_texturing` writes no texture. Files are matched by `<viewId>`. |
-| `inputMesh` | `RNbNeuS2` *Output Mesh* | No transform needed (see below). |
-| `visibilityRemappingMethod` | `MeshItself` | The default `PullPush` remaps the visibilities of the SfM landmarks and stops with *"Cannot remap visibilities as there is no reference points"*. `MeshItself` ray-casts the visibility of every vertex. |
-| `subdivisionTargetRatio` | `0` | The subdivision targets the (empty) landmark cloud: with the default 0.8 the binary writes its outputs, then aborts (*corrupted double-linked list*, exit 134) and the node fails. The RNbNeuS2 mesh is dense anyway. |
-| `workingColorSpace` | `Linear` | Blend the linear albedo in linear space. |
-| `outputColorSpace` | `AUTO` | EXR texture: linear albedo; PNG texture: sRGB-encoded, directly viewable. |
-| `colorMapping.colorMappingFileType` | `exr` (data) or `png` (preview) | Use two `Texturing` nodes for both. |
-| `correctEV` | off | The albedo maps are not exposures. |
-| `unwrapMethod` | `Basic` | LSCM/ABF are limited to 600k/300k faces. |
-| `textureSide` / `downscale` | 4096 / 1 | With half-resolution albedo maps, `Basic` fills ~25% of a 4096 atlas (one tile); 2048 spills over several UDIM tiles. |
-
-Why EXR: photometric-stereo nodes write 16-bit PNG albedos with **linear** values,
-but AliceVision reads any untagged 8/16-bit PNG as sRGB. The harmonized EXR maps are
-read as linear data, so the texture color space is right.
-
-The mesh needs no transform: `RNbNeuS2` exports its mesh with y and z negated with
-respect to the SfMData world, which is the AliceVision mesh-file convention
-(`Meshing`, `MeshFiltering`, `Texturing`), so `Texturing` places it correctly with the
-SfMData cameras.
+| Parameter | Value | Why |
+|-----------|-------|-----|
+| `input` | *Harmonized Albedo SfMData* | Cameras of the albedo maps |
+| `imagesFolder` | *Harmonized Albedo Folder* | Required: no texture is written otherwise |
+| `visibilityRemappingMethod` | `MeshItself` | The SfMData has no landmarks |
+| `subdivisionTargetRatio` | `0` | The default aborts without landmarks |
+| `workingColorSpace` | `Linear` | The albedo maps are linear |
+| `correctEV` | off | The albedo maps are not exposures |
+| `textureSide` / `downscale` | 4096 / 1 | |
+| `colorMappingFileType` | `exr` (linear data) or `png` (preview) | |
 
 ## Usage in Meshroom
 
-1. Produce per-view normal maps (and optionally albedo/reflectance maps) and bring
-   them into the graph as SfMData.
-2. Add an **`RNbNeuS2`** node and connect:
-   - `Normal Maps SfMData` ← your normals SfMData (required),
-   - `Albedo Maps SfMData` ← albedo SfMData (optional, for reflectance-based training),
-   - `Mask SfMData` *or* `Mask Folder` ← masks (optional).
-3. Compute the node. The reconstructed mesh is exposed on `Output Mesh`; with
-   albedos, the harmonized albedo maps on `Harmonized Albedo Folder` /
-   `Harmonized Albedo SfMData` (to texture the mesh, see above).
+Connect `Normal Maps SfMData` (required), `Albedo Maps SfMData` and `Mask SfMData` or `Mask Folder` (optional) to the
+outputs of a photometric stereo node, e.g. [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS) or
+[mrLedGetter](https://github.com/meshroomHub/mrLedGetter), then compute the node.
 
-### Pipeline template
+---
 
-`meshroom/template_linosdmuni_rnbneus2.mgt` (listed in Meshroom's pipeline templates)
-runs the structure-from-motion of AliceVision, segments the object with SAM 3, then
-estimates the normals with three methods, each followed by an `RNbNeuS2` node (quick
-settings: 1000 steps, resolution 512), to compare the three meshes:
+## Pipeline template
 
-- LINO-UniPS (normals) → `RNbNeuS2_1`,
-- SDM-UniPS (normals and albedos) → `RNbNeuS2_2`,
-- Uni-MS-PS (normals) → `RNbNeuS2_3`.
+`meshroom/linoUniPsRnbNeus2.mgt` (*File > New Pipeline > Lino Uni Ps Rnb Neus2*) runs the structure-from-motion of
+AliceVision, segments the object with SAM 3, exports the undistorted images, estimates the normals with `LINOUniPS` and
+reconstructs the mesh with `RNbNeuS2` (quick settings: 1000 steps, resolution 512).
 
-It needs these plugins besides mrRNbNeuS2:
+It needs [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS), from Meshroom's plugin manager, and
+[mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node `ImageSegmentationSam3`), not in the plugin
+registry yet: install it by hand.
 
-- `mr-lino-unips`, `mr-sdm-unips` and `mr-uni-ms-ps`, from Meshroom's plugin manager;
-- [mrSegmentation](https://github.com/meshroomHub/mrSegmentation) (node
-  `ImageSegmentationSam3`), not in the plugin registry yet: install it by hand.
+Images: one folder per pose, holding the single-light images and one reference image lit by all the lights, whose
+filename contains `ambient` (CameraInit makes it the pose reference) and `all_leds` (`SfMFilter_1` keeps these images
+for the structure from motion and the segmentation). Set the SAM 3 prompt (`ImageSegmentationSam3_1`, default `stone`)
+to your object.
 
-Images: one folder per pose, holding the single-light images and one reference image
-lit by all the lights, whose filename contains `ambient` (CameraInit makes it the pose
-reference) and `all_leds` (`SfMFilter_1` keeps these images for the structure from
-motion and the segmentation). The photometric stereo nodes take the pose mask from the
-reference image only and do not use it as a lighting image. Set the SAM 3 prompt
-(`ImageSegmentationSam3_1`, default `stone`) to your object.
+---
 
 ## Command-line equivalent
 
-The node is a thin wrapper around the standalone RNb-NeuS2 pipeline
-(`rnb-neus2` script of the plugin venv). The same reconstruction can be launched
-without Meshroom:
+The node wraps the `rnb-neus2` script of the plugin venv, which runs the same reconstruction without Meshroom:
 
 ```bash
-# From SfMData (normals only)
+# Normals only
 venv/bin/rnb-neus2 --input normals.sfm --testbed RNb-NeuS2/build/testbed --output out/
 
-# From SfMData with reflectance (two-phase + albedo scaling), exporting the
-# harmonized albedo maps for texturing
-venv/bin/rnb-neus2 --input normals.sfm --albedo-sfm albedos.sfm \
-    --mask-sfm masks.sfm --has-albedo --testbed RNb-NeuS2/build/testbed --output out/ \
+# Normals, albedos and masks, exporting the harmonized albedo maps for texturing
+venv/bin/rnb-neus2 --input normals.sfm --albedo-sfm albedos.sfm --has-albedo --mask-folder masks/ \
+    --testbed RNb-NeuS2/build/testbed --output out/ \
     --harmonized-albedo-folder out/albedo --harmonized-albedo-sfm out/albedoHarmonized.sfm
 ```
 
-## Notes
+---
 
-- The node works entirely in unit-sphere coordinates internally and exports the
-  mesh back to world coordinates.
-- Scene normalization is automatic (`auto` prefers silhouettes when masks are
-  available, then falls back to 3D landmarks or camera centers).
-- Albedo scaling runs only when an Albedo SfMData is provided (see
-  [Albedo scaling](#albedo-scaling)).
+## Related Projects
+
+| Project | Description |
+|---------|-------------|
+| [RNb-NeuS2](https://github.com/meshroomHubWarehouse/RNb-NeuS2) | Neural surface reconstruction from normal and reflectance maps (IJCV 2025) |
+| [mrLINOUniPS](https://github.com/meshroomHub/mrLINOUniPS) | Meshroom plugin for LINO-UniPS photometric stereo |
+| [mrSDMUniPS](https://github.com/meshroomHub/mrSDMUniPS) | Meshroom plugin for SDM-UniPS photometric stereo |
+| [mrUniMSPS](https://github.com/meshroomHub/mrUniMSPS) | Meshroom plugin for Uni-MS-PS photometric stereo |
+| [mrLedGetter](https://github.com/meshroomHub/mrLedGetter) | Meshroom plugin for LED-getter near-light photometric stereo |
+| [mrOpenRNb](https://github.com/meshroomHub/mrOpenRNb) | Meshroom plugin for Open-RNb neural surface reconstruction |
+
+---
 
 ## License
 
