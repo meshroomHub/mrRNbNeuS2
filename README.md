@@ -55,8 +55,12 @@ package pinned in `pyproject.toml`.
 
 ### 2. Install the RNb-NeuS2 testbed
 
-The compiled testbed is not installed by the plugin manager yet. Download the
-archive matching your OS from the
+The plugin manager installs the compiled testbed with the plugin, when it supports
+release assets: it picks the archive of your OS, checks its SHA-256 and extracts it
+into `RNb-NeuS2/`. There is nothing else to do.
+
+Otherwise, the `testbed` asset of `pyproject.toml` is ignored with a warning, and the
+archive is installed by hand. Download the archive matching your OS from the
 [RNb-NeuS2 v2.0.3 release](https://github.com/RobinBruneau/RNb-NeuS2/releases/tag/v2.0.3),
 check its SHA-256 against the one shown on the release page, and extract it into the
 plugin folder:
@@ -90,9 +94,9 @@ export RNB_NEUS2_TESTBED_PATH=/path/to/RNb-NeuS2/build/testbed
 
 On Windows (PowerShell): `$env:RNB_NEUS2_TESTBED_PATH = "C:\path\to\RNb-NeuS2\build\testbed.exe"`.
 
-Updating or reinstalling the plugin from the plugin manager replaces its folder,
-`RNb-NeuS2/` included: extract the release archive again afterwards, or keep it
-outside the plugin folder with `RNB_NEUS2_TESTBED_PATH`.
+A plugin manager without release assets replaces the plugin folder when updating or
+reinstalling it, `RNb-NeuS2/` included: extract the release archive again afterwards,
+or keep it outside the plugin folder with `RNB_NEUS2_TESTBED_PATH`.
 
 ### Manual install (without the plugin manager)
 
