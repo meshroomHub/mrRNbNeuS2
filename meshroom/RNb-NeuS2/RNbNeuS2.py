@@ -189,7 +189,7 @@ class RNbNeuS2(desc.Node):
             description="Reconstructed mesh in world coordinates.",
             value="{nodeCacheFolder}/mesh.obj",
             semantic="mesh",
-            group="",
+            commandLineGroup="",
         ),
         desc.File(
             name="outputAlbedoFolder",
